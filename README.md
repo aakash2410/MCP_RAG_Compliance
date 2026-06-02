@@ -52,13 +52,21 @@ Certificates are RS256-signed JWTs with fingerprints written to an append-only r
 
 **Requirements:** Python 3.11+, an LLM API key (any provider — see [LLM Judge](#llm-judge))
 
+**Install from PyPI:**
+```bash
+pip install rag-compliance-auditor
+```
+
+**Or install from source:**
 ```bash
 git clone https://github.com/aakash2410/mcp_rag_compliance
 cd mcp_rag_compliance
 
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -e .
+```
 
+```bash
 cp .env.example .env
 # Edit .env — add your ANTHROPIC_API_KEY (or configure another provider)
 ```
