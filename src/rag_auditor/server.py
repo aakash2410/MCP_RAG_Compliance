@@ -11,7 +11,7 @@ load_dotenv()
 
 from . import certificate, report, store
 from .auditor import PROBE_PACK_VERSION, run_audit as _run_audit
-from .runner import DIMENSION_FILES, FRAMEWORK_DIMENSIONS, load_pack
+from .runner import FRAMEWORK_DIMENSIONS, list_all_packs, load_pack
 
 mcp = FastMCP(
     "RAG Compliance Auditor",
@@ -30,17 +30,28 @@ async def run_audit(
     timeout_ms: int = 10_000,
     concurrency: int = 5,
     dimensions_override: list[str] | None = None,
+    extra_dimensions: list[str] | None = None,
+    custom_probe_dirs: list[str] | None = None,
+    dimension_weights: dict[str, float] | None = None,
 ) -> dict:
     """
     Run a full compliance audit against a RAG endpoint.
 
     Args:
-        endpoint_url: HTTP/HTTPS URL of the RAG endpoint (POST with {"query": "..."}).
-        frameworks: List of frameworks to audit against. Options: eu_ai_act, gdpr_dpdp, hipaa, sebi_rbi.
-        probe_pack_version: Probe pack version to use (default: latest).
-        timeout_ms: Per-probe request timeout in milliseconds (default: 10000, max: 60000).
-        concurrency: Max parallel probe requests (default: 5, max: 20).
-        dimensions_override: Optional list of specific dimensions to test (e.g. ["D1","D2"]).
+        endpoint_url:        HTTP/HTTPS URL of the RAG endpoint (POST with {"query": "..."}).
+        frameworks:          Frameworks to audit. Options: eu_ai_act, gdpr_dpdp, hipaa, sebi_rbi.
+        probe_pack_version:  Probe pack version tag recorded in the audit result.
+        timeout_ms:          Per-probe request timeout in ms (default: 10000, max: 60000).
+        concurrency:         Max parallel probe requests (default: 5, max: 20).
+        dimensions_override: Replace framework-derived dimensions entirely (e.g. ["D1","D2"]).
+        extra_dimensions:    Append extra dimensions to the framework-derived list.
+                             Each entry can be a built-in ID ("D1"), a custom ID ("TOXICITY"),
+                             or a direct path to a YAML file ("/path/to/toxicity.yaml").
+        custom_probe_dirs:   Directories containing custom YAML probe packs. Custom dimensions
+                             found here are automatically added to the audit. Also configurable
+                             via the RAG_AUDITOR_PROBES_DIR environment variable.
+        dimension_weights:   Override per-dimension weights for the overall score
+                             (default: all 1.0). Example: {"D2": 2.0, "D5": 2.0}.
 
     Returns:
         audit_id, dimension_scores, overall_score, verdict, duration_ms
@@ -55,6 +66,9 @@ async def run_audit(
         timeout_ms=timeout_ms,
         concurrency=concurrency,
         dimensions_override=dimensions_override,
+        extra_dimensions=extra_dimensions,
+        custom_probe_dirs=custom_probe_dirs,
+        dimension_weights=dimension_weights,
     )
 
     return {
@@ -131,38 +145,33 @@ def get_report(audit_id: str, format: str = "json") -> dict | str:
 
 
 @mcp.tool()
-def list_probe_packs(framework: str | None = None) -> dict:
+def list_probe_packs(
+    framework: str | None = None,
+    custom_probe_dirs: list[str] | None = None,
+) -> dict:
     """
-    List available probe pack versions and their changelogs.
+    List all available probe packs — built-in and custom.
 
     Args:
-        framework: Optional framework filter (eu_ai_act, gdpr_dpdp, hipaa, sebi_rbi).
+        framework:         Optional framework filter (eu_ai_act, gdpr_dpdp, hipaa, sebi_rbi).
+                           Filters built-in dimensions only; custom packs always appear.
+        custom_probe_dirs: Extra directories to scan for custom YAML probe packs.
 
     Returns:
-        Dict of dimension → pack metadata with version and changelog.
+        Dict of dimension_id → pack metadata (name, version, probe_count, source, scoring_strategy).
     """
-    dimensions = (
-        FRAMEWORK_DIMENSIONS.get(framework, list(DIMENSION_FILES.keys()))
-        if framework
-        else list(DIMENSION_FILES.keys())
-    )
+    all_packs = list_all_packs(extra_dirs=custom_probe_dirs)
 
-    result = {}
-    for dim in dimensions:
-        try:
-            pack = load_pack(dim)
-            result[dim] = {
-                "name": pack["name"],
-                "version": pack["version"],
-                "description": pack["description"],
-                "frameworks": pack["frameworks"],
-                "probe_count": len(pack.get("probes", pack.get("probe_groups", []))),
-                "changelog": pack.get("changelog", {}),
-            }
-        except Exception as exc:
-            result[dim] = {"error": str(exc)}
+    if framework:
+        allowed = set(FRAMEWORK_DIMENSIONS.get(framework, []))
+        # Keep custom dims (not in the built-in set) regardless of framework filter
+        builtin_ids = {"D1", "D2", "D3", "D4", "D5", "D6", "D7"}
+        all_packs = {
+            k: v for k, v in all_packs.items()
+            if k in allowed or k not in builtin_ids
+        }
 
-    return result
+    return all_packs
 
 
 @mcp.tool()
