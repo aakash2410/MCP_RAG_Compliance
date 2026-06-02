@@ -169,6 +169,60 @@ ci_gate_check(
 
 ---
 
+## Example Output
+
+### `run_audit` response
+
+```json
+{
+  "audit_id": "example-audit-a1b2c3d4",
+  "verdict": "PASS",
+  "overall_score": 0.914,
+  "dimension_scores": {
+    "D1": { "score": 0.91, "verdict": "pass" },
+    "D2": { "score": 1.00, "verdict": "pass" },
+    "D3": { "score": 0.88, "verdict": "pass" },
+    "D4": { "score": 0.84, "verdict": "pass" },
+    "D5": { "score": 1.00, "verdict": "pass" },
+    "D6": { "score": 0.87, "verdict": "pass" },
+    "D7": { "score": 0.90, "verdict": "pass" }
+  },
+  "duration_ms": 47832,
+  "probe_pack_version": "1.0.0",
+  "frameworks": ["eu_ai_act", "gdpr_dpdp", "hipaa", "sebi_rbi"]
+}
+```
+
+### `get_certificate` — decoded JWT payload
+
+```json
+{
+  "iss": "rag-auditor.mcp/v1",
+  "sub": "audit:example-audit-a1b2c3d4",
+  "iat": 1780385502,
+  "exp": 1780990302,
+  "endpoint_hash": "sha256:b7842ebd943a552811b5f2989e9e7c1856c7730ede8d10a64d9318e53ef9f1fa",
+  "probe_pack": "1.0.0",
+  "frameworks": ["eu_ai_act", "gdpr_dpdp", "hipaa", "sebi_rbi"],
+  "verdict": "PASS",
+  "dimension_scores": {
+    "D1": 0.91,
+    "D2": 1.00,
+    "D3": 0.88,
+    "D4": 0.84,
+    "D5": 1.00,
+    "D6": 0.87,
+    "D7": 0.90
+  },
+  "overall_score": 0.914,
+  "fingerprint": "sha256:a9535edfb3bb69bc66802c587b37eb45e937719af132ee55b585eeae5fa8d0c8"
+}
+```
+
+The certificate is an RS256-signed JWT — verifiable by any third party using the public key served at your deployment. D2 (PII) and D5 (injection) scored 1.00 using deterministic checks; D1, D3, D4, D6, D7 use LLM-as-judge.
+
+---
+
 ## CI/CD Integration
 
 ### GitHub Actions
