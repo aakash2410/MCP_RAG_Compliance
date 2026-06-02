@@ -75,10 +75,12 @@ async def run_audit(
         "audit_id": result["audit_id"],
         "verdict": result["verdict"],
         "overall_score": result["overall_score"],
+        "trust_tier": result["trust_tier"],
         "dimension_scores": {
             dim: {"score": info["score"], "verdict": info["verdict"]}
             for dim, info in result["dimensions"].items()
         },
+        "probe_manifest": result["probe_manifest"],
         "duration_ms": result["duration_ms"],
         "probe_pack_version": result["probe_pack_version"],
         "frameworks": result["frameworks"],

@@ -9,7 +9,13 @@ from pathlib import Path
 import yaml
 
 from . import store
-from .runner import dimensions_for_frameworks, load_pack, run_dimension
+from .runner import (
+    dimensions_for_frameworks,
+    load_pack,
+    pack_provenance,
+    run_dimension,
+    trust_floor,
+)
 from .scorer import aggregate_dimension, score_results
 
 PROBE_PACK_VERSION = "1.0.0"
@@ -136,16 +142,24 @@ async def run_audit(
     )
     weights = dimension_weights or DIMENSION_WEIGHTS
 
-    async def run_and_score(dim: str) -> tuple[str, dict]:
+    async def run_and_score(dim: str) -> tuple[str, dict, dict]:
         probe_results = await run_dimension(dim, endpoint_url, timeout_ms, concurrency)
         # Load pack once here so scorer doesn't need to re-resolve custom dimensions
         try:
             pack = load_pack(dim)
         except Exception:
             pack = None
+        # Registry-controlled provenance for this dimension's pack
+        try:
+            provenance = pack_provenance(dim)
+        except Exception:
+            provenance = {"dimension": dim, "pack": dim, "version": "?",
+                          "author": None, "author_uri": None, "trust_tier": "self_authored"}
+        # Use the resolved dimension ID from provenance as the canonical key
+        canonical_dim = provenance.get("dimension", dim)
         score_results(dim, probe_results, pack=pack)
         dim_score, dim_verdict = aggregate_dimension(dim, probe_results)
-        return dim, {
+        return canonical_dim, provenance, {
             "name": _dim_name(dim),
             "score": dim_score,
             "verdict": dim_verdict,
@@ -165,8 +179,12 @@ async def run_audit(
             ],
         }
 
-    dim_tuples = await asyncio.gather(*[run_and_score(dim) for dim in dimensions])
-    dim_results = dict(dim_tuples)
+    dim_triples = await asyncio.gather(*[run_and_score(dim) for dim in dimensions])
+    dim_results = {d: info for d, _prov, info in dim_triples}
+
+    # Per-dimension probe provenance manifest (signed into the certificate)
+    probe_manifest = {d: prov for d, prov, _info in dim_triples}
+    overall_trust_tier = trust_floor([p["trust_tier"] for p in probe_manifest.values()])
 
     dim_scores = {dim: info["score"] for dim, info in dim_results.items()}
     total_weight = sum(weights.get(d, 1.0) for d in dim_scores)
@@ -183,6 +201,8 @@ async def run_audit(
         "endpoint_url": endpoint_url,
         "frameworks": frameworks,
         "probe_pack_version": probe_pack_version,
+        "probe_manifest": probe_manifest,
+        "trust_tier": overall_trust_tier,
         "started_at": started_at,
         "completed_at": completed_at,
         "duration_ms": int((completed_at - started_at) * 1000),

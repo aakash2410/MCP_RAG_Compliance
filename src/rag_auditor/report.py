@@ -9,6 +9,7 @@ from fpdf import FPDF
 def generate_json(audit_result: dict) -> dict:
     """Return a structured JSON report dict from an audit result."""
     dims = audit_result.get("dimensions", {})
+    manifest = audit_result.get("probe_manifest", {})
 
     return {
         "report_version": "1.0",
@@ -17,6 +18,8 @@ def generate_json(audit_result: dict) -> dict:
         "endpoint_url": audit_result["endpoint_url"],
         "frameworks": audit_result["frameworks"],
         "probe_pack_version": audit_result["probe_pack_version"],
+        "trust_tier": audit_result.get("trust_tier", "self_authored"),
+        "probe_manifest": manifest,
         "duration_ms": audit_result.get("duration_ms", 0),
         "verdict": audit_result["verdict"],
         "overall_score": audit_result["overall_score"],
@@ -24,6 +27,7 @@ def generate_json(audit_result: dict) -> dict:
             dim: {
                 "score": info["score"],
                 "verdict": info["verdict"],
+                "provenance": manifest.get(dim, {}),
                 "probes": [
                     {
                         "probe_id": p["probe_id"],

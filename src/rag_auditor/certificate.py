@@ -85,7 +85,13 @@ def issue(audit_result: dict, ttl_hours: int | None = None) -> dict:
         "iat": now,
         "exp": exp,
         "endpoint_hash": f"sha256:{endpoint_hash}",
-        "probe_pack": audit_result["probe_pack_version"],
+        # Per-dimension probe provenance — who authored each pack and its
+        # registry-assigned trust tier. Signed as part of the certificate.
+        "probe_manifest": audit_result.get("probe_manifest", {}),
+        # Overall trust floor: the lowest tier of any pack used in this audit.
+        # Does NOT affect the verdict — it is disclosed so a verifier can judge
+        # whether the probes behind a PASS are ones they trust.
+        "trust_tier": audit_result.get("trust_tier", "self_authored"),
         "frameworks": audit_result["frameworks"],
         "verdict": audit_result["verdict"],
         "dimension_scores": {
@@ -107,6 +113,7 @@ def issue(audit_result: dict, ttl_hours: int | None = None) -> dict:
         "issued_at": now,
         "expires_at": exp,
         "verdict": audit_result["verdict"],
+        "trust_tier": audit_result.get("trust_tier", "self_authored"),
     }
     store.append_cert_registry(registry_entry)
 
@@ -117,6 +124,8 @@ def issue(audit_result: dict, ttl_hours: int | None = None) -> dict:
         "expires_at": exp,
         "ttl_hours": ttl,
         "verdict": audit_result["verdict"],
+        "trust_tier": audit_result.get("trust_tier", "self_authored"),
+        "probe_manifest": audit_result.get("probe_manifest", {}),
         "public_key_pem": _public_key_path().read_text(),
     }
 
@@ -138,6 +147,10 @@ def verify(token: str) -> dict:
             "fingerprint": fingerprint,
             "expires_at": payload.get("exp"),
             "verdict": payload.get("verdict"),
+            # Trust floor + per-dimension provenance, surfaced so a verifier sees
+            # which probe packs (and whose) a PASS was actually earned against.
+            "trust_tier": payload.get("trust_tier", "self_authored"),
+            "probe_manifest": payload.get("probe_manifest", {}),
             "issuer": payload.get("iss"),
             "in_registry": registry_entry is not None,
         }

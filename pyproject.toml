@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rag-compliance-auditor"
-version = "1.0.0"
+version = "1.1.0"
 description = "MCP server that probes, scores, and certifies RAG pipeline compliance — EU AI Act, GDPR/DPDP, HIPAA, SEBI/RBI"
 readme = "README.md"
 license = { file = "LICENSE" }

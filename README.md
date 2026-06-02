@@ -188,6 +188,7 @@ ci_gate_check(
     "D7": { "score": 0.90, "verdict": "pass" }
   },
   "duration_ms": 47832,
+  "trust_tier": "official",
   "probe_pack_version": "1.0.0",
   "frameworks": ["eu_ai_act", "gdpr_dpdp", "hipaa", "sebi_rbi"]
 }
@@ -202,24 +203,23 @@ ci_gate_check(
   "iat": 1780385502,
   "exp": 1780990302,
   "endpoint_hash": "sha256:b7842ebd943a552811b5f2989e9e7c1856c7730ede8d10a64d9318e53ef9f1fa",
-  "probe_pack": "1.0.0",
+  "trust_tier": "official",
+  "probe_manifest": {
+    "D2": { "pack": "d2_pii_leakage", "version": "1.0.0", "author": null, "trust_tier": "official" },
+    "D5": { "pack": "d5_injection",   "version": "1.0.0", "author": null, "trust_tier": "official" }
+  },
   "frameworks": ["eu_ai_act", "gdpr_dpdp", "hipaa", "sebi_rbi"],
   "verdict": "PASS",
   "dimension_scores": {
-    "D1": 0.91,
-    "D2": 1.00,
-    "D3": 0.88,
-    "D4": 0.84,
-    "D5": 1.00,
-    "D6": 0.87,
-    "D7": 0.90
+    "D1": 0.91, "D2": 1.00, "D3": 0.88, "D4": 0.84,
+    "D5": 1.00, "D6": 0.87, "D7": 0.90
   },
   "overall_score": 0.914,
   "fingerprint": "sha256:a9535edfb3bb69bc66802c587b37eb45e937719af132ee55b585eeae5fa8d0c8"
 }
 ```
 
-The certificate is an RS256-signed JWT — verifiable by any third party using the public key served at your deployment. D2 (PII) and D5 (injection) scored 1.00 using deterministic checks; D1, D3, D4, D6, D7 use LLM-as-judge.
+The certificate is an RS256-signed JWT — verifiable by any third party using the public key served at your deployment. The `probe_manifest` records exactly which probe packs (and whose) earned each dimension score, and `trust_tier` is the floor across them all — see [Trust Tiers](#trust-tiers).
 
 ---
 
@@ -406,6 +406,45 @@ run_audit(
 ```
 
 Custom dimensions appear in audit results, reports, and certificates exactly like built-in ones.
+
+---
+
+## Trust Tiers
+
+Because probes are pluggable, a certificate has to answer an honest question: *who authored the probes behind this PASS?* A vendor could otherwise write three softball probes labelled `dimension: HIPAA`, score 1.00, and mint a certificate indistinguishable from one earned against a rigorous pack.
+
+This tool does **not** pretend to be the authority on what good compliance looks like. The authority is the probe pack author — and every certificate says so explicitly. Each cert carries a signed `probe_manifest` recording which pack earned each dimension, plus an overall `trust_tier`.
+
+### The tiers
+
+Trust tier is **registry-controlled** — derived from where a pack came from, never self-declared. A `trust_tier:` field in a YAML pack is ignored.
+
+| Tier | Assigned when | Meaning |
+|------|--------------|---------|
+| `official` | Pack ships bundled with `rag-compliance-auditor` | The project maintains and vouches for it |
+| `verified` | Pack has a valid signature from a key in `RAG_AUDITOR_TRUSTED_KEYS_DIR` | A third party you trust vouches for it |
+| `self_authored` | Pack loaded from a user directory | Identifiable (via `author`) but unvouched |
+
+A pack's `author` / `author_uri` fields are recorded in the manifest as a "return address" — but anyone can type any name, so they **earn no trust on their own**.
+
+### The floor rule
+
+A certificate's overall `trust_tier` is the **lowest tier of any pack used** in the audit. Mix one `self_authored` pack into an otherwise-official audit, and the whole certificate is stamped `self_authored`.
+
+Crucially, **trust tier never changes the verdict.** A PASS is a PASS. The tier is disclosed alongside it so a buyer verifying the certificate sees *"this PASS was earned partly against a self_authored HIPAA pack"* and decides for themselves whether that clears their bar.
+
+### Earning the `verified` tier
+
+Pack authors sign their pack; verifiers add the matching public key to their trusted keys directory:
+
+```bash
+# Author signs (produces toxicity.yaml.sig)
+python -m scripts.sign_probe_pack ./my_probes/toxicity.yaml ./author_private_key.pem
+
+# Verifier trusts the author's public key
+export RAG_AUDITOR_TRUSTED_KEYS_DIR=/path/to/trusted_keys
+# now packs signed by that key resolve to trust_tier: verified
+```
 
 ---
 

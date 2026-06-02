@@ -10,6 +10,7 @@ the package source — just drop a YAML file in their probes directory.
 """
 
 import asyncio
+import base64
 import os
 import time
 from dataclasses import dataclass, field
@@ -18,6 +19,8 @@ from typing import Any
 
 import httpx
 import yaml
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
 
 # Built-in probes shipped with the package
 _BUILTIN_PROBES_DIR = Path(__file__).parent / "probes"
@@ -73,20 +76,81 @@ def _probe_search_dirs() -> list[Path]:
     return dirs
 
 
-def load_pack(dimension_or_path: str) -> dict:
+# ─── Trust tiers (registry-controlled, never self-declared) ──────────────────
+# Tier is derived from WHERE a pack came from, not from any field in the YAML.
+#   official      — bundled with the package; the project vouches for it
+#   verified      — third-party pack with a valid signature from a trusted key
+#   self_authored — loaded from a user directory; identifiable but unvouched
+# A pack's own `trust_tier:` field (if present) is ignored.
+TRUST_TIER_ORDER = {"self_authored": 0, "verified": 1, "official": 2}
+
+
+def _trusted_keys_dir() -> Path | None:
+    p = os.getenv("RAG_AUDITOR_TRUSTED_KEYS_DIR")
+    return Path(p) if p else None
+
+
+def _is_builtin(source: Path) -> bool:
+    try:
+        source.resolve().relative_to(_BUILTIN_PROBES_DIR.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _has_trusted_signature(source: Path) -> bool:
+    """True if a sibling <pack>.sig validates against any key in the trusted keys dir."""
+    keys_dir = _trusted_keys_dir()
+    if not keys_dir or not keys_dir.is_dir():
+        return False
+    sig_file = source.with_suffix(source.suffix + ".sig")
+    if not sig_file.exists():
+        return False
+    try:
+        signature = base64.b64decode(sig_file.read_text().strip())
+        data = source.read_bytes()
+    except Exception:
+        return False
+    for key_path in sorted(keys_dir.glob("*.pem")):
+        try:
+            pub = serialization.load_pem_public_key(key_path.read_bytes())
+            pub.verify(signature, data, padding.PKCS1v15(), hashes.SHA256())
+            return True
+        except Exception:
+            continue
+    return False
+
+
+def compute_trust_tier(source: Path) -> str:
+    """Registry-controlled tier assignment based on pack provenance."""
+    if _is_builtin(source):
+        return "official"
+    if _has_trusted_signature(source):
+        return "verified"
+    return "self_authored"
+
+
+def trust_floor(tiers: list[str]) -> str:
+    """The lowest (least-trusted) tier across a set — the floor for a certificate."""
+    if not tiers:
+        return "self_authored"
+    return min(tiers, key=lambda t: TRUST_TIER_ORDER.get(t, 0))
+
+
+def resolve_pack(dimension_or_path: str) -> tuple[dict, Path]:
     """
-    Load a probe pack by dimension ID (e.g. "D1") or direct file path.
+    Resolve a probe pack by dimension ID (e.g. "D1") or direct file path.
+    Returns (parsed_pack, source_path).
 
     Resolution order:
       1. If dimension_or_path is an existing file path — load it directly.
-      2. Search RAG_AUDITOR_PROBES_DIR for any .yaml file whose `dimension`
-         field matches, or whose filename stem matches (case-insensitive).
+      2. Search RAG_AUDITOR_PROBES_DIR for a .yaml whose `dimension` field matches.
       3. Fall back to built-in package probes.
     """
     # Direct file path
     p = Path(dimension_or_path)
     if p.suffix in (".yaml", ".yml") and p.exists():
-        return yaml.safe_load(p.read_text())
+        return yaml.safe_load(p.read_text()), p
 
     dim = dimension_or_path.upper()
 
@@ -94,18 +158,38 @@ def load_pack(dimension_or_path: str) -> dict:
         if not search_dir.exists():
             continue
         for yaml_file in sorted(search_dir.glob("*.yaml")):
-            # Match by built-in filename
             if search_dir == _BUILTIN_PROBES_DIR and _BUILTIN_FILES.get(dim) == yaml_file.name:
-                return yaml.safe_load(yaml_file.read_text())
-            # Match by dimension field inside the YAML
+                return yaml.safe_load(yaml_file.read_text()), yaml_file
             try:
                 pack = yaml.safe_load(yaml_file.read_text())
                 if str(pack.get("dimension", "")).upper() == dim:
-                    return pack
+                    return pack, yaml_file
             except Exception:
                 continue
 
     raise FileNotFoundError(f"No probe pack found for dimension '{dimension_or_path}'")
+
+
+def load_pack(dimension_or_path: str) -> dict:
+    """Load a probe pack by dimension ID or file path. See resolve_pack()."""
+    return resolve_pack(dimension_or_path)[0]
+
+
+def pack_provenance(dimension_or_path: str) -> dict:
+    """
+    Return signed-into-certificate provenance for a pack: pack name, version,
+    declared author (disclosed, not trusted), source, and registry-assigned trust_tier.
+    """
+    pack, source = resolve_pack(dimension_or_path)
+    dim = str(pack.get("dimension", source.stem)).upper()
+    return {
+        "dimension": dim,
+        "pack": source.stem,
+        "version": str(pack.get("version", "?")),
+        "author": pack.get("author"),          # disclosed provenance, earns no trust
+        "author_uri": pack.get("author_uri"),
+        "trust_tier": compute_trust_tier(source),
+    }
 
 
 def list_all_packs(extra_dirs: list[str] | None = None) -> dict[str, dict]:
@@ -132,6 +216,9 @@ def list_all_packs(extra_dirs: list[str] | None = None) -> dict[str, dict]:
                         "description": pack.get("description", ""),
                         "frameworks": pack.get("frameworks", []),
                         "source": str(yaml_file),
+                        "author": pack.get("author"),
+                        "author_uri": pack.get("author_uri"),
+                        "trust_tier": compute_trust_tier(yaml_file),
                         "probe_count": len(pack.get("probes", pack.get("probe_groups", []))),
                         "scoring_strategy": pack.get("scoring_strategy", "llm_judge"),
                         "changelog": pack.get("changelog", {}),

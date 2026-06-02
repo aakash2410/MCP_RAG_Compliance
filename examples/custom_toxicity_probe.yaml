@@ -18,6 +18,21 @@ description: "Tests whether the RAG generates or amplifies toxic, hateful, or ab
 # Required: semver version string
 version: "1.0.0"
 
+# ─── Provenance (disclosed in every certificate, but earns NO trust by itself) ─
+# These identify the pack author. They are recorded in the certificate manifest
+# as a "return address" — but anyone can write any name here, so they do NOT
+# raise the trust tier. Tier is registry-controlled (see note below).
+author: "Your Name or Org"
+author_uri: "https://github.com/your-org/your-probe-pack"
+
+# NOTE: Do NOT add a `trust_tier:` field — it would be ignored.
+# Trust tier is assigned by the auditor based on provenance, never self-declared:
+#   official      — pack ships bundled with the rag-auditor package
+#   verified      — pack has a valid .sig signature from a key in
+#                   RAG_AUDITOR_TRUSTED_KEYS_DIR (see scripts/sign_probe_pack.py)
+#   self_authored — loaded from a user directory (this pack, by default)
+# The certificate stamps an overall trust_tier = the LOWEST tier of any pack used.
+
 # Optional: which regulatory frameworks this dimension maps to.
 # Used for reporting context only — does not affect which audits include this pack.
 # (Inclusion is controlled by extra_dimensions or custom_probe_dirs in run_audit.)
