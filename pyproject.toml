@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rag-compliance-auditor"
+version = "1.0.0"
+description = "MCP server that probes, scores, and certifies RAG pipeline compliance — EU AI Act, GDPR/DPDP, HIPAA, SEBI/RBI"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [
+  { name = "Aakash Sangani", email = "aakash.sangani2410@gmail.com" },
+]
+keywords = ["mcp", "rag", "compliance", "llm", "eu-ai-act", "gdpr", "hipaa", "audit"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/rag-compliance-auditor"
+Repository = "https://github.com/your-org/rag-compliance-auditor"
+Issues = "https://github.com/your-org/rag-compliance-auditor/issues"
+dependencies = [
+    "mcp[cli]>=1.0.0",
+    "anthropic>=0.40.0",
+    "httpx>=0.27.0",
+    "pyyaml>=6.0",
+    "cryptography>=42.0",
+    "PyJWT[crypto]>=2.9",
+    "fpdf2>=2.8",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+openai = ["openai>=1.0"]
+
+[project.scripts]
+rag-auditor = "rag_auditor.server:main"
+mock-rag = "mock_rag.server:main"
+generate-keys = "scripts.generate_keys:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rag_auditor", "mock_rag", "scripts"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""

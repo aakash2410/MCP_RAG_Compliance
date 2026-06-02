@@ -1,0 +1,47 @@
+# ── Secrets & keys ───────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+keys/private_key.pem
+keys/*.pem
+*.key
+*.p12
+*.pfx
+
+# ── Audit data & certificates ─────────────────────────────────────────────────
+.rag_audits/
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+pip-wheel-metadata/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── macOS ────────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ── IDEs ─────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+*.log
+*.tmp
+
