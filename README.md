@@ -53,8 +53,8 @@ Certificates are RS256-signed JWTs with fingerprints written to an append-only r
 **Requirements:** Python 3.11+, an LLM API key (any provider — see [LLM Judge](#llm-judge))
 
 ```bash
-git clone https://github.com/your-org/rag-compliance-auditor
-cd rag-compliance-auditor
+git clone https://github.com/aakash2410/mcp_rag_compliance
+cd mcp_rag_compliance
 
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -e .

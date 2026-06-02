@@ -23,11 +23,6 @@ classifiers = [
   "Topic :: Software Development :: Quality Assurance",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-
-[project.urls]
-Homepage = "https://github.com/your-org/rag-compliance-auditor"
-Repository = "https://github.com/your-org/rag-compliance-auditor"
-Issues = "https://github.com/your-org/rag-compliance-auditor/issues"
 dependencies = [
     "mcp[cli]>=1.0.0",
     "anthropic>=0.40.0",
@@ -40,6 +35,11 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "python-dotenv>=1.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/aakash2410/mcp_rag_compliance"
+Repository = "https://github.com/aakash2410/mcp_rag_compliance"
+Issues = "https://github.com/aakash2410/mcp_rag_compliance/issues"
 
 [project.optional-dependencies]
 openai = ["openai>=1.0"]
