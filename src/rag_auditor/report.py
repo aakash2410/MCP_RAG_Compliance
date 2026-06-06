@@ -155,6 +155,195 @@ def generate_pdf(audit_result: dict) -> bytes:
     return bytes(pdf.output())
 
 
+def generate_sarif(audit_result: dict) -> dict:
+    """Return a SARIF 2.1.0 report dict from an audit result.
+
+    Each dimension becomes one SARIF result:
+      error   → verdict fail  (score < 0.65 or dimension failed)
+      warning → verdict warn  (score < 0.85 but ≥ 0.65)
+      note    → verdict pass  (score ≥ 0.85)
+
+    Designed to be written to a .sarif file and uploaded to GitHub Advanced
+    Security or any other SARIF-consuming tool.
+    """
+    try:
+        from importlib.metadata import version as _pkg_version
+        _version = _pkg_version("rag-compliance-auditor")
+    except Exception:
+        _version = "unknown"
+
+    dims = audit_result.get("dimensions", {})
+    frameworks = audit_result.get("frameworks", [])
+    endpoint_url = audit_result.get("endpoint_url", "")
+
+    _dim_frameworks = {
+        "D1": ["eu_ai_act", "hipaa", "sebi_rbi"],
+        "D2": ["gdpr_dpdp", "hipaa", "sebi_rbi"],
+        "D3": ["eu_ai_act", "gdpr_dpdp"],
+        "D4": ["eu_ai_act", "sebi_rbi"],
+        "D5": ["eu_ai_act", "hipaa"],
+        "D6": ["eu_ai_act", "hipaa", "sebi_rbi"],
+        "D7": ["gdpr_dpdp", "sebi_rbi"],
+    }
+
+    rules = [
+        {
+            "id": dim,
+            "name": info["name"].replace(" ", "").replace("&", "And").replace("/", "Or"),
+            "shortDescription": {"text": info["name"]},
+            "helpUri": "https://github.com/aakash2410/mcp_rag_compliance",
+            "properties": {
+                "frameworks": _dim_frameworks.get(dim, []),
+                "tags": frameworks,
+            },
+        }
+        for dim, info in dims.items()
+    ]
+
+    def _level(verdict: str, score: float) -> str:
+        if verdict == "fail" or score < 0.65:
+            return "error"
+        if score < 0.85:
+            return "warning"
+        return "note"
+
+    results = []
+    for dim, info in dims.items():
+        score = info["score"]
+        verdict = info["verdict"]
+        level = _level(verdict, score)
+        rem = _remediation(dim, score)
+        message = f"{dim} ({info['name']}) scored {score:.3f} — {verdict.upper()}."
+        if rem:
+            message += f" {rem}"
+
+        results.append({
+            "ruleId": dim,
+            "level": level,
+            "message": {"text": message},
+            "locations": [
+                {
+                    "physicalLocation": {
+                        "artifactLocation": {"uri": endpoint_url},
+                    }
+                }
+            ],
+            "properties": {
+                "score": score,
+                "verdict": verdict,
+                "probe_count": len(info.get("probe_results", [])),
+                "frameworks": _dim_frameworks.get(dim, []),
+            },
+        })
+
+    completed_at = audit_result.get("completed_at")
+    end_time = (
+        time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(completed_at))
+        if completed_at
+        else time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    )
+
+    return {
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "version": "2.1.0",
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "name": "RAG Compliance Auditor",
+                        "version": _version,
+                        "informationUri": "https://github.com/aakash2410/mcp_rag_compliance",
+                        "rules": rules,
+                    }
+                },
+                "invocations": [
+                    {
+                        "executionSuccessful": True,
+                        "endTimeUtc": end_time,
+                    }
+                ],
+                "results": results,
+                "properties": {
+                    "audit_id": audit_result["audit_id"],
+                    "endpoint_url": endpoint_url,
+                    "overall_score": audit_result["overall_score"],
+                    "verdict": audit_result["verdict"],
+                    "frameworks": frameworks,
+                    "trust_tier": audit_result.get("trust_tier", "self_authored"),
+                },
+            }
+        ],
+    }
+
+
+def generate_diff(before: dict, after: dict) -> dict:
+    """Compare two audit results and return a structured diff.
+
+    Returns score deltas per dimension, which dimensions regressed vs improved,
+    verdict changes, and newly added or removed dimensions.
+    """
+    dims_before = {d: info["score"] for d, info in before.get("dimensions", {}).items()}
+    dims_after  = {d: info["score"] for d, info in after.get("dimensions", {}).items()}
+    verd_before = {d: info["verdict"] for d, info in before.get("dimensions", {}).items()}
+    verd_after  = {d: info["verdict"] for d, info in after.get("dimensions", {}).items()}
+
+    all_dims = sorted(set(dims_before) | set(dims_after))
+    new_dims     = sorted(set(dims_after) - set(dims_before))
+    removed_dims = sorted(set(dims_before) - set(dims_after))
+    common_dims  = sorted(set(dims_before) & set(dims_after))
+
+    dimension_diffs = {}
+    regressions = []
+    improvements = []
+
+    for dim in all_dims:
+        if dim in new_dims:
+            dimension_diffs[dim] = {"status": "added", "score_after": dims_after[dim], "verdict_after": verd_after[dim]}
+            continue
+        if dim in removed_dims:
+            dimension_diffs[dim] = {"status": "removed", "score_before": dims_before[dim], "verdict_before": verd_before[dim]}
+            continue
+
+        s_before = dims_before[dim]
+        s_after  = dims_after[dim]
+        delta    = round(s_after - s_before, 4)
+        changed  = abs(delta) >= 0.001
+
+        dimension_diffs[dim] = {
+            "status": "changed" if changed else "unchanged",
+            "score_before":   s_before,
+            "score_after":    s_after,
+            "delta":          delta,
+            "verdict_before": verd_before[dim],
+            "verdict_after":  verd_after[dim],
+        }
+
+        if changed:
+            if delta < 0:
+                regressions.append(dim)
+            else:
+                improvements.append(dim)
+
+    overall_before = before.get("overall_score", 0.0)
+    overall_after  = after.get("overall_score", 0.0)
+
+    return {
+        "audit_id_before": before["audit_id"],
+        "audit_id_after":  after["audit_id"],
+        "verdict_before":  before["verdict"],
+        "verdict_after":   after["verdict"],
+        "verdict_changed": before["verdict"] != after["verdict"],
+        "overall_score_before": overall_before,
+        "overall_score_after":  overall_after,
+        "overall_score_delta":  round(overall_after - overall_before, 4),
+        "dimensions":     dimension_diffs,
+        "improvements":   improvements,
+        "regressions":    regressions,
+        "new_dimensions": new_dims,
+        "removed_dimensions": removed_dims,
+    }
+
+
 _REMEDIATION = {
     "D1": "Review retrieval faithfulness — implement source-grounded generation and add a faithfulness re-ranker.",
     "D2": "Audit your chunking pipeline for PII; apply NER-based PII redaction before indexing. Review GDPR Art.25 data minimisation.",

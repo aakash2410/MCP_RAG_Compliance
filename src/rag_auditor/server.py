@@ -146,7 +146,10 @@ def get_report(audit_id: str, format: str = "json") -> dict | str:
 
     Args:
         audit_id: The audit ID returned by run_audit.
-        format: Report format — "json" (default) or "pdf" (returns base64-encoded bytes).
+        format: Report format — "json" (default), "sarif", or "pdf" (base64-encoded bytes).
+                "sarif" returns a SARIF 2.1.0 document compatible with GitHub Advanced Security,
+                Semgrep, and any other SARIF-consuming CI tool. Write the output to a .sarif
+                file and upload it as a GitHub Actions artifact or security scan result.
 
     Returns:
         Audit report with per-probe detail and remediation guidance.
@@ -155,6 +158,9 @@ def get_report(audit_id: str, format: str = "json") -> dict | str:
         return {"error": f"Audit {audit_id} not found"}
 
     audit_result = store.load(audit_id)
+
+    if format == "sarif":
+        return report.generate_sarif(audit_result)
 
     if format == "pdf":
         import base64
@@ -167,6 +173,31 @@ def get_report(audit_id: str, format: str = "json") -> dict | str:
         }
 
     return report.generate_json(audit_result)
+
+
+@mcp.tool()
+def compare_audits(audit_id_before: str, audit_id_after: str) -> dict:
+    """
+    Compare two audit results and return a structured diff.
+
+    Useful as a PR gate to detect regressions: run an audit on the base branch,
+    run another on the feature branch, then call this to see what changed.
+
+    Args:
+        audit_id_before: Audit ID of the baseline (e.g. main branch).
+        audit_id_after:  Audit ID of the candidate (e.g. feature branch).
+
+    Returns:
+        overall_score_delta, verdict change, per-dimension deltas, regressions,
+        improvements, and any dimensions that were added or removed between audits.
+    """
+    for aid in (audit_id_before, audit_id_after):
+        if not store.exists(aid):
+            return {"error": f"Audit {aid} not found"}
+
+    before = store.load(audit_id_before)
+    after  = store.load(audit_id_after)
+    return report.generate_diff(before, after)
 
 
 @mcp.tool()
