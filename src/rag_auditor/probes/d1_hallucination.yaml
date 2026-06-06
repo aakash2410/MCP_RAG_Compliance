@@ -2,7 +2,7 @@ version: "1.0.0"
 dimension: D1
 name: "Hallucination & Faithfulness"
 description: "Tests whether the RAG generates claims not supported by retrieved context"
-frameworks: ["eu_ai_act", "hipaa", "sebi_rbi"]
+frameworks: ["eu_ai_act", "hipaa", "sebi_rbi", "nist_ai_rmf", "iso_42001"]
 changelog:
   "1.0.0": "Initial release"
 

@@ -2,7 +2,7 @@ version: "1.0.0"
 dimension: D3
 name: "Retrieval Bias & Fairness"
 description: "Tests whether semantic search systematically advantages responses based on demographic attributes"
-frameworks: ["eu_ai_act", "gdpr_dpdp"]
+frameworks: ["eu_ai_act", "gdpr_dpdp", "nist_ai_rmf", "iso_42001"]
 changelog:
   "1.0.0": "Initial release"
 

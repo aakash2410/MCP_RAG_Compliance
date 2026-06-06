@@ -20,19 +20,19 @@ This MCP fills that gap. It fires adversarial and benign probe sets directly at 
 
 ## What it audits
 
-Every audit covers **7 compliance dimensions** across 4 regulatory frameworks:
+Every audit covers **7 compliance dimensions** across 6 regulatory frameworks:
 
-| Dim | Name | Frameworks |
-|-----|------|-----------|
-| D1 | Hallucination & Faithfulness | EU AI Act Art.15, HIPAA, SEBI |
-| D2 | PII & Sensitive Data Leakage | GDPR, DPDP, HIPAA, SEBI CSCRF |
-| D3 | Retrieval Bias & Fairness | EU AI Act Art.10, GDPR Art.22 |
-| D4 | Source Attribution & Provenance | EU AI Act Art.11-12, SEBI |
-| D5 | Prompt Injection Resilience | EU AI Act Art.15, HIPAA |
-| D6 | Refusal & Boundary Behaviour | EU AI Act Art.9, HIPAA, SEBI |
-| D7 | Data Residency & Cross-Border Flow | GDPR Ch.V, DPDP Sec.16, RBI |
+| Dim | Name | EU AI Act | GDPR/DPDP | HIPAA | SEBI/RBI | NIST AI RMF | ISO 42001 |
+|-----|------|:---------:|:---------:|:-----:|:--------:|:-----------:|:---------:|
+| D1 | Hallucination & Faithfulness | Art.15 | | §164.312 | CSCRF 6.1 | MEASURE 2.5 | A.5.5, A.7.2 |
+| D2 | PII & Sensitive Data Leakage | Art.10, 13 | Art.5, 25 | §164.502, 514 | CSCRF 8.3 | MEASURE 2.9 | A.6.1, A.5.6 |
+| D3 | Retrieval Bias & Fairness | Art.10, 9 | Art.22 | | | MEASURE 2.6 | A.8.3, A.6.2 |
+| D4 | Source Attribution & Provenance | Art.11-12 | | | CSCRF 6.2 | MEASURE 2.3 | A.7.1, A.5.1 |
+| D5 | Prompt Injection Resilience | Art.15 | | §164.312 | CSCRF 9.1 | MEASURE 2.7 | A.5.6, A.5.5 |
+| D6 | Refusal & Boundary Behaviour | Art.9, 14 | | §164.530 | RBI §6 | MEASURE 2.8 | A.8.2, A.7.3 |
+| D7 | Data Residency & Cross-Border Flow | Art.10 | Ch.V, DPDP §16 | | RBI §7 | MEASURE 2.9 | A.6.1, A.3.2 |
 
-**Supported frameworks:** `eu_ai_act` · `gdpr_dpdp` · `hipaa` · `sebi_rbi`
+**Supported frameworks:** `eu_ai_act` · `gdpr_dpdp` · `hipaa` · `sebi_rbi` · `nist_ai_rmf` · `iso_42001`
 
 ---
 
@@ -649,7 +649,7 @@ scripts/
 Pull requests are welcome. Areas that need help:
 
 - **New probes** — adversarial patterns, framework-specific variants, regression cases
-- **New frameworks** — SOC 2, ISO 42001, NIST AI RMF, RBI CSCRF
+- **New frameworks** — SOC 2, RBI CSCRF (NIST AI RMF and ISO 42001 now supported)
 - **Judge adapters** — additional LLM providers
 - **Report formats** — SARIF, CycloneDX AI BOM
 

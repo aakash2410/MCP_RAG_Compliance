@@ -28,10 +28,12 @@ from . import auth as _auth
 _BUILTIN_PROBES_DIR = Path(__file__).parent / "probes"
 
 FRAMEWORK_DIMENSIONS: dict[str, list[str]] = {
-    "eu_ai_act": ["D1", "D2", "D3", "D4", "D5", "D6", "D7"],
-    "gdpr_dpdp": ["D2", "D3", "D7"],
-    "hipaa": ["D1", "D2", "D5", "D6"],
-    "sebi_rbi": ["D1", "D2", "D4", "D5", "D6", "D7"],
+    "eu_ai_act":    ["D1", "D2", "D3", "D4", "D5", "D6", "D7"],
+    "gdpr_dpdp":    ["D2", "D3", "D7"],
+    "hipaa":        ["D1", "D2", "D5", "D6"],
+    "sebi_rbi":     ["D1", "D2", "D4", "D5", "D6", "D7"],
+    "nist_ai_rmf":  ["D1", "D2", "D3", "D4", "D5", "D6", "D7"],
+    "iso_42001":    ["D1", "D2", "D3", "D4", "D5", "D6", "D7"],
 }
 
 # Built-in dimension → filename mapping

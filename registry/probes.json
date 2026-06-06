@@ -8,7 +8,13 @@
     "author_uri": "https://github.com/aakash2410/mcp_rag_compliance",
     "download_url": "https://raw.githubusercontent.com/aakash2410/mcp_rag_compliance/main/src/rag_auditor/probes/d1_hallucination.yaml",
     "signature_url": null,
-    "frameworks": ["eu_ai_act", "hipaa", "sebi_rbi"],
+    "frameworks": [
+      "eu_ai_act",
+      "hipaa",
+      "sebi_rbi",
+      "nist_ai_rmf",
+      "iso_42001"
+    ],
     "description": "Tests whether the RAG fabricates facts not grounded in retrieved context.",
     "trust_tier": "official",
     "status": "active"
@@ -22,8 +28,15 @@
     "author_uri": "https://github.com/aakash2410/mcp_rag_compliance",
     "download_url": "https://raw.githubusercontent.com/aakash2410/mcp_rag_compliance/main/src/rag_auditor/probes/d2_pii_leakage.yaml",
     "signature_url": null,
-    "frameworks": ["eu_ai_act", "gdpr_dpdp", "hipaa", "sebi_rbi"],
-    "description": "Deterministic regex checks — fails if PII patterns (SSN, email, credit card, Aadhaar) appear in RAG responses.",
+    "frameworks": [
+      "eu_ai_act",
+      "gdpr_dpdp",
+      "hipaa",
+      "sebi_rbi",
+      "nist_ai_rmf",
+      "iso_42001"
+    ],
+    "description": "Deterministic regex checks \u2014 fails if PII patterns (SSN, email, credit card, Aadhaar) appear in RAG responses.",
     "trust_tier": "official",
     "status": "active"
   },
@@ -36,7 +49,12 @@
     "author_uri": "https://github.com/aakash2410/mcp_rag_compliance",
     "download_url": "https://raw.githubusercontent.com/aakash2410/mcp_rag_compliance/main/src/rag_auditor/probes/d3_bias.yaml",
     "signature_url": null,
-    "frameworks": ["eu_ai_act", "gdpr_dpdp"],
+    "frameworks": [
+      "eu_ai_act",
+      "gdpr_dpdp",
+      "nist_ai_rmf",
+      "iso_42001"
+    ],
     "description": "Tests whether the RAG gives systematically different response quality across demographic groups.",
     "trust_tier": "official",
     "status": "active"
@@ -50,7 +68,12 @@
     "author_uri": "https://github.com/aakash2410/mcp_rag_compliance",
     "download_url": "https://raw.githubusercontent.com/aakash2410/mcp_rag_compliance/main/src/rag_auditor/probes/d4_attribution.yaml",
     "signature_url": null,
-    "frameworks": ["eu_ai_act", "sebi_rbi"],
+    "frameworks": [
+      "eu_ai_act",
+      "sebi_rbi",
+      "nist_ai_rmf",
+      "iso_42001"
+    ],
     "description": "Tests whether the RAG cites sources, avoids presenting stale data as current, and distinguishes retrieved from generated content.",
     "trust_tier": "official",
     "status": "active"
@@ -64,8 +87,14 @@
     "author_uri": "https://github.com/aakash2410/mcp_rag_compliance",
     "download_url": "https://raw.githubusercontent.com/aakash2410/mcp_rag_compliance/main/src/rag_auditor/probes/d5_injection.yaml",
     "signature_url": null,
-    "frameworks": ["eu_ai_act", "hipaa", "sebi_rbi"],
-    "description": "String-match checks — fails if the RAG follows instructions injected into retrieved context.",
+    "frameworks": [
+      "eu_ai_act",
+      "hipaa",
+      "sebi_rbi",
+      "nist_ai_rmf",
+      "iso_42001"
+    ],
+    "description": "String-match checks \u2014 fails if the RAG follows instructions injected into retrieved context.",
     "trust_tier": "official",
     "status": "active"
   },
@@ -78,7 +107,13 @@
     "author_uri": "https://github.com/aakash2410/mcp_rag_compliance",
     "download_url": "https://raw.githubusercontent.com/aakash2410/mcp_rag_compliance/main/src/rag_auditor/probes/d6_refusal.yaml",
     "signature_url": null,
-    "frameworks": ["eu_ai_act", "hipaa", "sebi_rbi"],
+    "frameworks": [
+      "eu_ai_act",
+      "hipaa",
+      "sebi_rbi",
+      "nist_ai_rmf",
+      "iso_42001"
+    ],
     "description": "Tests whether the RAG refuses or appropriately qualifies out-of-scope medical, legal, and financial queries.",
     "trust_tier": "official",
     "status": "active"
@@ -92,7 +127,13 @@
     "author_uri": "https://github.com/aakash2410/mcp_rag_compliance",
     "download_url": "https://raw.githubusercontent.com/aakash2410/mcp_rag_compliance/main/src/rag_auditor/probes/d7_residency.yaml",
     "signature_url": null,
-    "frameworks": ["eu_ai_act", "gdpr_dpdp", "sebi_rbi"],
+    "frameworks": [
+      "eu_ai_act",
+      "gdpr_dpdp",
+      "sebi_rbi",
+      "nist_ai_rmf",
+      "iso_42001"
+    ],
     "description": "Tests whether the RAG leaks cross-border data storage or processing locations in violation of residency requirements.",
     "trust_tier": "official",
     "status": "active"

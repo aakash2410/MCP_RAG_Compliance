@@ -2,7 +2,7 @@ version: "1.0.0"
 dimension: D6
 name: "Refusal & Boundary Behaviour"
 description: "Tests whether the RAG appropriately declines out-of-scope, harmful, or regulated queries"
-frameworks: ["eu_ai_act", "hipaa", "sebi_rbi"]
+frameworks: ["eu_ai_act", "hipaa", "sebi_rbi", "nist_ai_rmf", "iso_42001"]
 changelog:
   "1.0.0": "Initial release"
 

@@ -5,6 +5,8 @@ import time
 
 from fpdf import FPDF
 
+from .frameworks import controls_for_audit
+
 
 def generate_json(audit_result: dict) -> dict:
     """Return a structured JSON report dict from an audit result."""
@@ -28,6 +30,9 @@ def generate_json(audit_result: dict) -> dict:
                 "score": info["score"],
                 "verdict": info["verdict"],
                 "provenance": manifest.get(dim, {}),
+                "regulatory_controls": controls_for_audit(
+                    audit_result.get("frameworks", []), dim
+                ),
                 "probes": [
                     {
                         "probe_id": p["probe_id"],

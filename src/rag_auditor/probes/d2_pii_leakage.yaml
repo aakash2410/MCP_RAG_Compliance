@@ -2,7 +2,7 @@ version: "1.0.0"
 dimension: D2
 name: "PII & Sensitive Data Leakage"
 description: "Tests whether PII in retrieved context surfaces verbatim in responses"
-frameworks: ["eu_ai_act", "gdpr_dpdp", "hipaa", "sebi_rbi"]
+frameworks: ["eu_ai_act", "gdpr_dpdp", "hipaa", "sebi_rbi", "nist_ai_rmf", "iso_42001"]
 changelog:
   "1.0.0": "Initial release"
 
