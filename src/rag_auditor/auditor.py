@@ -8,6 +8,7 @@ from pathlib import Path
 
 import yaml
 
+from . import auth as _auth
 from . import store
 from .runner import (
     dimensions_for_frameworks,
@@ -116,6 +117,7 @@ async def run_audit(
     extra_dimensions: list[str] | None = None,
     custom_probe_dirs: list[str] | None = None,
     dimension_weights: dict[str, float] | None = None,
+    endpoint_auth: dict | None = None,
 ) -> dict:
     """
     Run a full compliance audit.
@@ -133,6 +135,7 @@ async def run_audit(
         custom_probe_dirs:   Directories to scan for custom YAML probe packs. Also
                              settable via RAG_AUDITOR_PROBES_DIR env var.
         dimension_weights:   Per-dimension weights for the overall score (default: all 1.0).
+        endpoint_auth:       Auth config for the RAG endpoint. See auth.py for supported types.
     """
     audit_id = str(uuid.uuid4())
     started_at = time.time()
@@ -143,7 +146,7 @@ async def run_audit(
     weights = dimension_weights or DIMENSION_WEIGHTS
 
     async def run_and_score(dim: str) -> tuple[str, dict, dict]:
-        probe_results = await run_dimension(dim, endpoint_url, timeout_ms, concurrency)
+        probe_results = await run_dimension(dim, endpoint_url, timeout_ms, concurrency, endpoint_auth)
         # Load pack once here so scorer doesn't need to re-resolve custom dimensions
         try:
             pack = load_pack(dim)
@@ -199,6 +202,7 @@ async def run_audit(
     audit_result = {
         "audit_id": audit_id,
         "endpoint_url": endpoint_url,
+        "endpoint_auth": _auth.sanitize(endpoint_auth),
         "frameworks": frameworks,
         "probe_pack_version": probe_pack_version,
         "probe_manifest": probe_manifest,

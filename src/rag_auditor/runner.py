@@ -22,6 +22,8 @@ import yaml
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
+from . import auth as _auth
+
 # Built-in probes shipped with the package
 _BUILTIN_PROBES_DIR = Path(__file__).parent / "probes"
 
@@ -242,10 +244,15 @@ async def _fire_probe(
     query: str,
     context: str | None,
     timeout_ms: int,
+    extra_headers: dict[str, str] | None = None,
 ) -> tuple[str, int, str | None]:
     payload: dict[str, Any] = {"query": query}
     if context:
         payload["context"] = context
+
+    headers = {"User-Agent": "RAGComplianceAuditor/1.0"}
+    if extra_headers:
+        headers.update(extra_headers)
 
     start = time.monotonic()
     try:
@@ -253,7 +260,7 @@ async def _fire_probe(
             endpoint_url,
             json=payload,
             timeout=timeout_ms / 1000,
-            headers={"User-Agent": "RAGComplianceAuditor/1.0"},
+            headers=headers,
         )
         latency = int((time.monotonic() - start) * 1000)
         resp.raise_for_status()
@@ -276,6 +283,7 @@ async def run_dimension(
     endpoint_url: str,
     timeout_ms: int,
     concurrency: int,
+    auth_config: dict | None = None,
 ) -> list[ProbeResult]:
     """
     dimension may be a built-in ID ("D1"), a custom ID ("CUSTOM_TOXICITY"),
@@ -287,6 +295,9 @@ async def run_dimension(
 
     sem = asyncio.Semaphore(concurrency)
 
+    # Resolve auth once per dimension (OAuth2 token fetch happens here)
+    extra_headers, httpx_auth = await _auth.resolve_auth(auth_config)
+
     # D3 and any pack with probe_groups uses the grouped structure
     if pack.get("probe_groups"):
         probes = []
@@ -297,13 +308,13 @@ async def run_dimension(
     else:
         probes = pack.get("probes", [])
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(auth=httpx_auth) as client:
         async def run_one(probe: dict) -> ProbeResult:
             async with sem:
                 query = probe["query"]
                 context = probe.get("injected_context")
                 raw_response, latency, error = await _fire_probe(
-                    client, endpoint_url, query, context, timeout_ms
+                    client, endpoint_url, query, context, timeout_ms, extra_headers
                 )
                 return ProbeResult(
                     probe_id=probe["id"],
