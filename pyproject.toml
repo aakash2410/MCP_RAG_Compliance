@@ -48,6 +48,8 @@ openai = ["openai>=1.0"]
 rag-auditor = "rag_auditor.server:main"
 mock-rag = "mock_rag.server:main"
 generate-keys = "scripts.generate_keys:main"
+sign-probe-pack = "scripts.sign_probe_pack:main"
+verify-probe-pack = "scripts.verify_probe_pack:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rag_auditor", "mock_rag", "scripts"]

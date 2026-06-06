@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 
 load_dotenv()
 
@@ -35,6 +35,7 @@ async def run_audit(
     custom_probe_dirs: list[str] | None = None,
     dimension_weights: dict[str, float] | None = None,
     endpoint_auth: dict | None = None,
+    ctx: Context | None = None,
 ) -> dict:
     """
     Run a full compliance audit against a RAG endpoint.
@@ -82,6 +83,16 @@ async def run_audit(
     timeout_ms = min(timeout_ms, 60_000)
     concurrency = min(concurrency, 20)
 
+    async def _on_dim_complete(dim_id, verdict, score, completed, total):
+        if ctx is None:
+            return
+        label = "PASS" if verdict == "pass" else ("WARN" if verdict == "warn" else "FAIL")
+        await ctx.info(f"[{completed}/{total}] {dim_id} — {label} ({score:.3f})")
+        await ctx.report_progress(completed, total)
+
+    if ctx:
+        await ctx.info(f"Starting audit of {endpoint_url} ({len(frameworks)} framework(s))")
+
     result = await _run_audit(
         endpoint_url=endpoint_url,
         frameworks=frameworks,
@@ -93,6 +104,7 @@ async def run_audit(
         custom_probe_dirs=custom_probe_dirs,
         dimension_weights=dimension_weights,
         endpoint_auth=endpoint_auth,
+        on_dimension_complete=_on_dim_complete,
     )
 
     return {

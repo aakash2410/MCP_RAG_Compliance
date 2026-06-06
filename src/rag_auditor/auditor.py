@@ -4,7 +4,9 @@ import asyncio
 import os
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -118,6 +120,7 @@ async def run_audit(
     custom_probe_dirs: list[str] | None = None,
     dimension_weights: dict[str, float] | None = None,
     endpoint_auth: dict | None = None,
+    on_dimension_complete: Callable[..., Any] | None = None,
 ) -> dict:
     """
     Run a full compliance audit.
@@ -134,8 +137,10 @@ async def run_audit(
                              file path ("/path/to/toxicity.yaml").
         custom_probe_dirs:   Directories to scan for custom YAML probe packs. Also
                              settable via RAG_AUDITOR_PROBES_DIR env var.
-        dimension_weights:   Per-dimension weights for the overall score (default: all 1.0).
-        endpoint_auth:       Auth config for the RAG endpoint. See auth.py for supported types.
+        dimension_weights:      Per-dimension weights for the overall score (default: all 1.0).
+        endpoint_auth:          Auth config for the RAG endpoint. See auth.py for supported types.
+        on_dimension_complete:  Optional async callback fired after each dimension finishes.
+                                Signature: async (dim_id, verdict, score, completed, total) -> None.
     """
     audit_id = str(uuid.uuid4())
     started_at = time.time()
@@ -144,8 +149,11 @@ async def run_audit(
         frameworks, dimensions_override, extra_dimensions, custom_probe_dirs
     )
     weights = dimension_weights or DIMENSION_WEIGHTS
+    total_dims = len(dimensions)
+    completed_dims = 0
 
     async def run_and_score(dim: str) -> tuple[str, dict, dict]:
+        nonlocal completed_dims
         probe_results = await run_dimension(dim, endpoint_url, timeout_ms, concurrency, endpoint_auth)
         # Load pack once here so scorer doesn't need to re-resolve custom dimensions
         try:
@@ -162,6 +170,11 @@ async def run_audit(
         canonical_dim = provenance.get("dimension", dim)
         score_results(dim, probe_results, pack=pack)
         dim_score, dim_verdict = aggregate_dimension(dim, probe_results)
+        completed_dims += 1
+        if on_dimension_complete:
+            await on_dimension_complete(
+                canonical_dim, dim_verdict, dim_score, completed_dims, total_dims
+            )
         return canonical_dim, provenance, {
             "name": _dim_name(dim),
             "score": dim_score,
