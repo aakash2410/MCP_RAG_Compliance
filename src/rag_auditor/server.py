@@ -33,6 +33,7 @@ async def run_audit(
     extra_dimensions: list[str] | None = None,
     custom_probe_dirs: list[str] | None = None,
     dimension_weights: dict[str, float] | None = None,
+    endpoint_auth: dict | None = None,
 ) -> dict:
     """
     Run a full compliance audit against a RAG endpoint.
@@ -52,6 +53,27 @@ async def run_audit(
                              via the RAG_AUDITOR_PROBES_DIR environment variable.
         dimension_weights:   Override per-dimension weights for the overall score
                              (default: all 1.0). Example: {"D2": 2.0, "D5": 2.0}.
+        endpoint_auth:       Auth config for protected RAG endpoints. Supported types:
+
+                             Bearer token (reads token from env var MY_TOKEN):
+                               {"type": "bearer", "token_env": "MY_TOKEN"}
+                             Bearer token (inline — use for testing only):
+                               {"type": "bearer", "token": "sk-..."}
+
+                             Custom header (e.g. X-Api-Key):
+                               {"type": "api_key", "header": "X-Api-Key", "token_env": "MY_KEY"}
+
+                             HTTP Basic Auth:
+                               {"type": "basic", "username": "user", "password_env": "MY_PASS"}
+
+                             OAuth2 Client Credentials (Azure AD, Okta, GCP, etc.):
+                               {"type": "oauth2_client_credentials",
+                                "token_url": "https://login.microsoftonline.com/<tenant>/oauth2/v2.0/token",
+                                "client_id": "abc123",
+                                "client_secret_env": "AZURE_CLIENT_SECRET",
+                                "scope": "api://my-rag/.default"}
+
+                             Tokens are never stored in audit results or certificates.
 
     Returns:
         audit_id, dimension_scores, overall_score, verdict, duration_ms
@@ -69,6 +91,7 @@ async def run_audit(
         extra_dimensions=extra_dimensions,
         custom_probe_dirs=custom_probe_dirs,
         dimension_weights=dimension_weights,
+        endpoint_auth=endpoint_auth,
     )
 
     return {
