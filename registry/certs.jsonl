@@ -1,0 +1,1 @@
+{"audit_id": "7093ef44-c274-4c25-b2af-c7dc461f80b7", "fingerprint": "sha256:c48b210fcec23a573426ea38310ad9d863d25f1db67059e4df423d083f1d346e", "endpoint_hash": "sha256:cc9c11f902a470741a7cebe8903a5e2fccfcaf3167639d9674f8034a0a2c56e6", "issued_at": 1780729942, "expires_at": 1781334742, "verdict": "PASS", "frameworks": ["hipaa"], "trust_tier": "official"}

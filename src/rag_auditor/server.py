@@ -1,6 +1,7 @@
 """MCP server — exposes the six compliance auditor tools."""
 
 import asyncio
+import json
 import os
 from pathlib import Path
 
@@ -302,6 +303,52 @@ def ci_gate_check(
         "overall_score": overall,
         "dimension_scores": dim_scores,
         "pipeline_action": "CONTINUE" if exit_code == 0 else ("WARN" if exit_code == 1 else "BLOCK"),
+    }
+
+
+@mcp.tool()
+def list_registry_packs(
+    framework: str | None = None,
+    trust_tier: str | None = None,
+    status: str = "active",
+) -> dict:
+    """
+    List probe packs from the hosted probe pack registry.
+
+    The registry (registry/probes.json) is a curated index of published probe packs —
+    both official packs bundled with this tool and community-contributed verified packs.
+    Probe authors can add their pack by opening a PR against the registry file.
+
+    Args:
+        framework:  Filter by framework (eu_ai_act, gdpr_dpdp, hipaa, sebi_rbi).
+        trust_tier: Filter by trust tier (official, verified, self_authored).
+        status:     Filter by status — "active" (default) or "all".
+
+    Returns:
+        List of probe pack descriptors with download URLs and trust metadata.
+    """
+    registry_dir = Path(os.getenv("RAG_AUDITOR_REGISTRY_DIR", "registry"))
+    registry_file = registry_dir / "probes.json"
+
+    if not registry_file.exists():
+        return {"error": "Probe registry not found. Expected registry/probes.json relative to CWD."}
+
+    try:
+        packs = json.loads(registry_file.read_text())
+    except Exception as exc:
+        return {"error": f"Failed to read probe registry: {exc}"}
+
+    if status != "all":
+        packs = [p for p in packs if p.get("status", "active") == status]
+    if framework:
+        packs = [p for p in packs if framework in p.get("frameworks", [])]
+    if trust_tier:
+        packs = [p for p in packs if p.get("trust_tier") == trust_tier]
+
+    return {
+        "total": len(packs),
+        "packs": packs,
+        "registry_source": str(registry_file.resolve()),
     }
 
 
