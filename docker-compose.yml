@@ -1,0 +1,27 @@
+services:
+  rag-auditor:
+    build: .
+    stdin_open: true   # required for MCP stdio transport
+    tty: false
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      JUDGE_PROVIDER: ${JUDGE_PROVIDER:-anthropic}
+      JUDGE_MODEL: ${JUDGE_MODEL:-claude-sonnet-4-6}
+      JUDGE_API_KEY: ${JUDGE_API_KEY:-}
+      JUDGE_BASE_URL: ${JUDGE_BASE_URL:-}
+    volumes:
+      - rag-keys:/app/keys
+      - rag-audits:/app/.rag_audits
+
+  mock-rag:
+    build: .
+    command: mock-rag
+    ports:
+      - "8765:8765"
+    environment:
+      MOCK_PROFILE: ${MOCK_PROFILE:-compliant}
+      MOCK_RAG_PORT: 8765
+
+volumes:
+  rag-keys:
+  rag-audits:

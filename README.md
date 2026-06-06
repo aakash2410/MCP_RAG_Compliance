@@ -71,7 +71,22 @@ cp .env.example .env
 # Edit .env — add your ANTHROPIC_API_KEY (or configure another provider)
 ```
 
-**Start the MCP server:**
+**Or run with Docker:**
+
+```bash
+# MCP server (stdio transport — point your MCP client at this)
+docker build -t rag-compliance-auditor .
+docker run --rm -i \
+  -e ANTHROPIC_API_KEY \
+  -v rag-auditor-keys:/app/keys \
+  -v rag-auditor-audits:/app/.rag_audits \
+  rag-compliance-auditor
+
+# Auditor + mock RAG together (useful for CI and local development)
+ANTHROPIC_API_KEY=sk-ant-... docker compose up
+```
+
+**Start the MCP server (pip install path):**
 
 ```bash
 rag-auditor
@@ -95,6 +110,72 @@ MOCK_PROFILE=compliant mock-rag
 # Terminal 2 — MCP server
 rag-auditor
 ```
+
+---
+
+## MCP Client Setup
+
+Add the auditor to any MCP-compatible client in under a minute.
+
+### Claude Desktop
+
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+**pip install (recommended):**
+```json
+{
+  "mcpServers": {
+    "rag-auditor": {
+      "command": "rag-auditor",
+      "env": {
+        "ANTHROPIC_API_KEY": "sk-ant-..."
+      }
+    }
+  }
+}
+```
+
+**Docker:**
+```json
+{
+  "mcpServers": {
+    "rag-auditor": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "-e", "ANTHROPIC_API_KEY",
+        "-v", "rag-auditor-keys:/app/keys",
+        "-v", "rag-auditor-audits:/app/.rag_audits",
+        "rag-compliance-auditor"
+      ],
+      "env": {
+        "ANTHROPIC_API_KEY": "sk-ant-..."
+      }
+    }
+  }
+}
+```
+
+### Cursor
+
+Create or edit `.cursor/mcp.json` in your project root (or `~/.cursor/mcp.json` for global):
+
+```json
+{
+  "mcpServers": {
+    "rag-auditor": {
+      "command": "rag-auditor",
+      "env": {
+        "ANTHROPIC_API_KEY": "sk-ant-..."
+      }
+    }
+  }
+}
+```
+
+### Any MCP client
+
+The server speaks **MCP stdio transport** — any client that can spawn a subprocess and communicate over stdin/stdout works. The command is `rag-auditor` (pip install) or `docker run --rm -i ... rag-compliance-auditor` (Docker).
 
 ---
 

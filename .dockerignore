@@ -1,0 +1,13 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+dist
+*.egg-info
+keys/
+.rag_audits/
+.env
+.DS_Store
+examples/
